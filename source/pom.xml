@@ -40,7 +40,7 @@
         <!-- Version management -->
         <!-- Spring Version -->
         <spring.version>5.3.19</spring.version>
-        <spring-security.version>5.6.3</spring-security.version>
+        <spring-security.version>5.6.4</spring-security.version>
         <!-- JSON Lib Version -->
         <json.version>20080701</json.version>
         <gson.version>2.9.0</gson.version>
@@ -268,7 +268,7 @@
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna</artifactId>
             <version>${jna.version}</version>
-            <classifier />
+            <classifier/>
         </dependency>
         <dependency>
             <groupId>net.java.dev.jna</groupId>
@@ -825,16 +825,16 @@
                                 <configuration>
                                     <target>
                                         <!-- Upload artifact -->
-                                        <echo message="Uploading artifact to QA server..." />
-                                        <scp file="${project.build.directory}/${project.build.finalName}.zip" todir="${cerberus.demo.qa.username}@${cerberus.demo.host}:${cerberus.demo.upload.path}" password="${cerberus.demo.qa.password}" trust="yes" />
+                                        <echo message="Uploading artifact to QA server..."/>
+                                        <scp file="${project.build.directory}/${project.build.finalName}.zip" todir="${cerberus.demo.qa.username}@${cerberus.demo.host}:${cerberus.demo.upload.path}" password="${cerberus.demo.qa.password}" trust="yes"/>
                                         <!--
                                             Deploy artifact by:
                                                 1. Extracting distribution package to the server's upload path;
                                                 2. Redeploying current application
                                                 3. Restarting current cluster.
                                         -->
-                                        <echo message="Deploying..." />
-                                        <sshexec host="${cerberus.demo.host}" username="${cerberus.demo.qa.username}" password="${cerberus.demo.qa.password}" trust="yes" command="unzip -o ${cerberus.demo.upload.path}/${project.build.finalName}.zip -d ${cerberus.demo.upload.path} &amp;&amp; ( ${cerberus.demo.tomcat.deploy} ${cerberus.demo.upload.path}/${project.build.finalName}/${project.build.finalName}.war )" />
+                                        <echo message="Deploying..."/>
+                                        <sshexec host="${cerberus.demo.host}" username="${cerberus.demo.qa.username}" password="${cerberus.demo.qa.password}" trust="yes" command="unzip -o ${cerberus.demo.upload.path}/${project.build.finalName}.zip -d ${cerberus.demo.upload.path} &amp;&amp; ( ${cerberus.demo.tomcat.deploy} ${cerberus.demo.upload.path}/${project.build.finalName}/${project.build.finalName}.war )"/>
                                     </target>
                                 </configuration>
                             </execution>
