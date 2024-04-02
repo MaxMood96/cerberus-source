@@ -26,6 +26,7 @@ import io.appium.java_client.touch.offset.ElementOption;
 import io.appium.java_client.touch.offset.PointOption;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.cerberus.core.crud.entity.TestCaseExecution;
 import org.cerberus.core.crud.service.impl.ParameterService;
 import org.cerberus.core.engine.entity.Identifier;
 import org.cerberus.core.engine.entity.MessageEvent;
@@ -363,11 +364,10 @@ public abstract class AppiumService implements IAppiumService {
     }
 
     @Override
-    public MessageEvent scrollTo(Session session, Identifier element, String numberScrollDownMax) throws IllegalArgumentException {
-        AppiumDriver driver = session.getAppiumDriver();
+    public MessageEvent scrollTo(TestCaseExecution tCExecution, Identifier element, String numberScrollDownMax) throws IllegalArgumentException {
+        AppiumDriver driver = tCExecution.getSession().getAppiumDriver();
         MessageEvent message;
         try {
-            message = new MessageEvent(MessageEventEnum.ACTION_SUCCESS_SCROLLTO);
 
             int numberOfScrollDown = 8;
             try {
@@ -378,14 +378,11 @@ public abstract class AppiumService implements IAppiumService {
 
             // check text
             if (element.getIdentifier().equals("text")) {
-                scrollDown(driver, By.xpath("//*[contains(@text,'" + element.getLocator() + "')]"), numberOfScrollDown);
+                return scrollDown(driver, By.xpath("//*[contains(@text,'" + element.getLocator() + "')]"), numberOfScrollDown, tCExecution.getSystem());
             } else {
-                scrollDown(driver, this.getBy(element), numberOfScrollDown);
+                return scrollDown(driver, this.getBy(element), numberOfScrollDown, tCExecution.getSystem());
             }
 
-            message.setDescription(message.getDescription().replace("%VALUE%", element.toString()));
-
-            return message;
         } catch (CerberusEventException e) {
             LOG.error("An error occured during scroll to (element:" + element + ",numberScrollDownMax:" + numberScrollDownMax + ")", e);
             return e.getMessageError();
@@ -404,19 +401,21 @@ public abstract class AppiumService implements IAppiumService {
      * @param element
      * @return
      */
-    private boolean scrollDown(AppiumDriver driver, By element, int numberOfScrollDown) throws CerberusEventException{
+    private MessageEvent scrollDown(AppiumDriver driver, By element, int numberOfScrollDown, String system) throws CerberusEventException{
+
+        MessageEvent message = new MessageEvent(MessageEventEnum.ACTION_SUCCESS_SCROLLTOELEMENT);
 
         Dimension screenSize = driver.manage().window().getSize();
 
-        float screenTopPercentage = parameters.getParameterFloatByKey("cerberus_appium_scroll_endTopScreenPercentageScreenHeight", null, 0.125f);
-        float screenBottomPercentage = parameters.getParameterFloatByKey("cerberus_appium_scroll_startBottomPercentageScreenHeight", null, 0.8f);
+        float screenTopPercentage = parameters.getParameterFloatByKey("cerberus_appium_scroll_endTopScreenPercentageScreenHeight", system, 0.125f);
+        float screenBottomPercentage = parameters.getParameterFloatByKey("cerberus_appium_scroll_startBottomPercentageScreenHeight", system, 0.8f);
 
         /**
          * Check if cerberus_appium_scroll_endTopScreenPercentageScreenHeight and cerberus_appium_scroll_startBottomPercentageScreenHeight parameters are float between 0 and 1
          */
         if (screenTopPercentage < 0 || screenTopPercentage > 1 ||  screenBottomPercentage < 0 || screenBottomPercentage > 1){
-            MessageEvent me  =new MessageEvent(MessageEventEnum.ACTION_FAILED_SCROLL_INVALID_PARAMETER);
-            throw new CerberusEventException(me);
+            message = new MessageEvent(MessageEventEnum.ACTION_FAILED_SCROLL_INVALID_PARAMETER);
+            throw new CerberusEventException(message);
         }
 
         int pressX = driver.manage().window().getSize().width / 2;
@@ -429,14 +428,23 @@ public abstract class AppiumService implements IAppiumService {
         do {
             boolean isPresent = driver.findElements(element).size() > 0;
             if (isPresent && driver.findElement(element).isDisplayed()) {
-                return true;
+                message.setDescription(message.getDescription().replace("%N%", String.valueOf(i)));
+                message.setDescription(message.getDescription().replace("%FROM%", String.valueOf(bottomY)));
+                message.setDescription(message.getDescription().replace("%TO%", String.valueOf(topY)));
+                message.setDescription(message.getDescription().replace("%VALUE%", element.toString()));
+                return message;
             } else {
                 scroll(driver, pressX, bottomY, pressX, topY);
             }
             i++;
         } while (i < numberOfScrollDown);
 
-        return false;
+        message = new MessageEvent(MessageEventEnum.ACTION_FAILED_SCROLL_ELEMENT_NOT_FOUND);
+        message.setDescription(message.getDescription().replace("%N%", String.valueOf(i)));
+        message.setDescription(message.getDescription().replace("%FROM%", String.valueOf(bottomY)));
+        message.setDescription(message.getDescription().replace("%TO%", String.valueOf(topY)));
+        message.setDescription(message.getDescription().replace("%ELEMENT%", element.toString()));
+        return message;
     }
 
     private void scroll(AppiumDriver driver, int fromX, int fromY, int toX, int toY) {

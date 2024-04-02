@@ -787,10 +787,10 @@ public class ActionService implements IActionService {
             }
 
             if (tCExecution.getApplicationObj().getType().equalsIgnoreCase(Application.TYPE_APK)) {
-                return androidAppiumService.scrollTo(tCExecution.getSession(), identifier, text);
+                return androidAppiumService.scrollTo(tCExecution, identifier, text);
 
             } else if (tCExecution.getApplicationObj().getType().equalsIgnoreCase(Application.TYPE_IPA)) {
-                return iosAppiumService.scrollTo(tCExecution.getSession(), identifier, text);
+                return iosAppiumService.scrollTo(tCExecution, identifier, text);
 
             } else if (tCExecution.getApplicationObj().getType().equalsIgnoreCase(Application.TYPE_GUI)) {
                 return webdriverService.scrollTo(tCExecution.getSession(), identifier, text);
