@@ -20,12 +20,15 @@
 package org.cerberus.core.mcp.impl.application;
 
 import io.modelcontextprotocol.server.McpServerFeatures;
+import io.modelcontextprotocol.server.McpSyncServerExchange;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.cerberus.core.api.dto.application.ApplicationMapperV001;
+import org.cerberus.core.exception.CerberusException;
 import org.cerberus.core.mcp.MCPTool;
 import org.cerberus.core.mcp.util.MCPLogUtils;
 import org.cerberus.core.mcp.util.MCPProjectionUtils;
 import org.cerberus.core.mcp.util.MCPToolUtils;
+import org.cerberus.core.mcp.util.MCPUserContextService;
 import org.cerberus.core.crud.entity.Application;
 import org.cerberus.core.crud.service.IApplicationService;
 import org.cerberus.core.websocket.WebSocketEventSender;
@@ -61,14 +64,16 @@ public class ListApplicationTool implements MCPTool {
     private final IApplicationService applicationService;
     private final ApplicationMapperV001 applicationMapper;
     private final MCPLogUtils mcpLogUtils;
+    private final MCPUserContextService userContext;
 
     @Autowired
     private WebSocketEventSender webSocketEventSender;
 
-    public ListApplicationTool(IApplicationService applicationService, ApplicationMapperV001 applicationMapper, MCPLogUtils mcpLogUtils) {
+    public ListApplicationTool(IApplicationService applicationService, ApplicationMapperV001 applicationMapper, MCPLogUtils mcpLogUtils, MCPUserContextService userContext) {
         this.applicationService = applicationService;
         this.applicationMapper = applicationMapper;
         this.mcpLogUtils = mcpLogUtils;
+        this.userContext = userContext;
     }
 
     @Override
@@ -77,7 +82,7 @@ public class ListApplicationTool implements MCPTool {
                 createTool(),
                 (exchange, request) -> {
                     Map<String, Object> args = MCPToolUtils.argumentsOrEmpty(request.arguments());
-                    return execute(args);
+                    return execute(args, exchange);
                 }
         );
     }
@@ -168,10 +173,11 @@ public class ListApplicationTool implements MCPTool {
      * Executes the tool: loads all applications, applies the optional search filter,
      * maps entities to DTOs, projects the requested fields, and returns a JSON result.
      *
-     * @param args raw MCP argument map from the agent request
+     * @param args     raw MCP argument map from the agent request
+     * @param exchange the MCP exchange, used to resolve the caller's active system context
      * @return a {@link McpSchema.CallToolResult} containing the serialised application list
      */
-    private McpSchema.CallToolResult execute(Map<String, Object> args) {
+    private McpSchema.CallToolResult execute(Map<String, Object> args, McpSyncServerExchange exchange) {
         String intent = MCPToolUtils.getString(args, "intent", "");
         String search = MCPToolUtils.getString(args, "search", "");
         String appSessionID = MCPToolUtils.getString(args, "appSessionID", "");
@@ -182,8 +188,24 @@ public class ListApplicationTool implements MCPTool {
             webSocketEventSender.sendToAppSession(appSessionID, WebSocketStatic.CHANNEL_TOOL_START,
                     Map.of("toolName", TOOL_NAME ));
         }
-        mcpLogUtils.call(TOOL_NAME, intent, String.format("MCP tool %s called with intent=%s", TOOL_NAME, intent));
+        String login = userContext.getLogin(exchange);
+        mcpLogUtils.call(TOOL_NAME, intent, String.format("MCP tool %s called with intent=%s", TOOL_NAME, intent), login);
 
+        if (login == null) {
+            return MCPToolUtils.errorText("Unable to resolve the authenticated MCP user for this call.");
+        }
+        List<String> activeSystems;
+        try {
+            activeSystems = userContext.getContextSystems(userContext.getUser(login));
+        } catch (CerberusException e) {
+            return MCPToolUtils.errorText(
+                    "Unable to read system context for '" + login + "': " + e.getMessageError().getDescription());
+        }
+        if (activeSystems.isEmpty()) {
+            return MCPToolUtils.errorText(
+                    "No active system in your MCP context. Call cerberus_context_system_list to see your "
+                            + "allowed systems, then cerberus_context_system_update (action=add) to activate one or more.");
+        }
 
         // Explicit fields override intent-driven defaults when provided by the caller.
         List<String> fields = MCPToolUtils.getStringList(
@@ -196,6 +218,8 @@ public class ListApplicationTool implements MCPTool {
                 .getDataList()
                 .stream()
                 .map(Application.class::cast)
+                // Restrict to the caller's active system context (cerberus_context_system_list/_update).
+                .filter(app -> activeSystems.stream().anyMatch(system -> system.equalsIgnoreCase(app.getSystem())))
                 .filter(app -> matchesSearch(app, search))
                 .map(applicationMapper::toDTO)
                 // Reduce each DTO to only the caller-requested (or intent-default) fields to minimise payload size.
