@@ -80,41 +80,20 @@ public class OAuthProtectedResourceMetadataServlet extends HttpServlet {
      * Builds {@code scheme://host[:port]/context} from the incoming request,
      * omitting the port when it is the default for the scheme.
      *
-     * This servlet bypasses Spring MVC (see WebAppInitializer), so Spring's
-     * ForwardedHeaderFilter never runs for it : X-Forwarded-* headers set by
-     * the reverse proxy (TLS termination) are honored here directly, otherwise
-     * the reported "resource" would be http:// behind an https:// proxy and
-     * MCP clients would reject it as a mismatch.
+     * Behind a reverse proxy, request.getScheme()/getServerPort() already reflect
+     * the client-facing https:// origin via Tomcat's RemoteIpValve (see the WAR's
+     * META-INF/context.xml), which reads X-Forwarded-Proto/Host/Port upstream of
+     * every servlet, including this one which bypasses Spring MVC.
      */
     static String baseUrl(HttpServletRequest request) {
-        String scheme = firstForwardedValue(request, "X-Forwarded-Proto", request.getScheme());
-        String host = firstForwardedValue(request, "X-Forwarded-Host", request.getServerName());
+        String scheme = request.getScheme();
         int port = request.getServerPort();
-        String forwardedPort = firstForwardedValue(request, "X-Forwarded-Port", null);
-        if (forwardedPort != null) {
-            try {
-                port = Integer.parseInt(forwardedPort);
-            } catch (NumberFormatException ignored) {
-                // Keep the request's own port.
-            }
-        }
-
-        // X-Forwarded-Host may already carry a port (host:port).
-        boolean hostHasPort = host.contains(":");
-        StringBuilder base = new StringBuilder(scheme).append("://").append(host);
+        StringBuilder base = new StringBuilder(scheme).append("://").append(request.getServerName());
         boolean defaultPort = ("http".equals(scheme) && port == 80) || ("https".equals(scheme) && port == 443);
-        if (!hostHasPort && !defaultPort && port > 0) {
+        if (!defaultPort && port > 0) {
             base.append(':').append(port);
         }
         base.append(request.getContextPath());
         return base.toString();
-    }
-
-    private static String firstForwardedValue(HttpServletRequest request, String header, String fallback) {
-        String value = request.getHeader(header);
-        if (value == null || value.isBlank()) {
-            return fallback;
-        }
-        return value.split(",")[0].trim();
     }
 }
