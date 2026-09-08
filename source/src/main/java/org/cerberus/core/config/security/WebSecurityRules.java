@@ -37,8 +37,11 @@ public class WebSecurityRules {
 
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers(m("/api/public/**")).permitAll()
-                // OAuth Protected Resource Metadata (RFC 9728) : public discovery for MCP clients
+                // OAuth Protected Resource Metadata (RFC 9728) : public discovery for MCP clients.
+                // The "/mcp" mapping covers the path-appended discovery form clients probe when
+                // the resource identifier (here, the /mcp endpoint) has a non-root path.
                 .requestMatchers(m("/.well-known/oauth-protected-resource")).permitAll()
+                .requestMatchers(m("/.well-known/oauth-protected-resource/mcp")).permitAll()
                 // ── Public
                 .requestMatchers(
                         m("/DatabaseMaintenance.jsp"),

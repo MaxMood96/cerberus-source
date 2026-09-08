@@ -56,6 +56,9 @@ public class OAuthProtectedResourceMetadataServlet extends HttpServlet {
             return;
         }
 
+        if (keycloakUrl.endsWith("/")) {
+            keycloakUrl = keycloakUrl.substring(0, keycloakUrl.length() - 1);
+        }
         String issuer = keycloakUrl + "/realms/" + realm;
         String resource = baseUrl(request) + "/mcp";
 

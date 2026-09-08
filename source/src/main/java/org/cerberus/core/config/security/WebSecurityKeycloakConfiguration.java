@@ -68,10 +68,14 @@ public class WebSecurityKeycloakConfiguration {
 
 	private static final Logger LOG = LogManager.getLogger(WebSecurityKeycloakConfiguration.class);
 
+	private static String stripTrailingSlash(String url) {
+		return url != null && url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+	}
+
 	@Bean
 	public ClientRegistrationRepository clientRegistrationRepository() {
 
-		String keycloakUrl  = System.getProperty("org.cerberus.keycloak.url");
+		String keycloakUrl  = stripTrailingSlash(System.getProperty("org.cerberus.keycloak.url"));
 		String realm        = System.getProperty("org.cerberus.keycloak.realm");
 		String clientId     = System.getProperty("org.cerberus.keycloak.client");
 		String clientSecret = System.getProperty("org.cerberus.keycloak.secret");
@@ -145,7 +149,7 @@ public class WebSecurityKeycloakConfiguration {
 
 	@Bean
 	public JwtDecoder mcpJwtDecoder() {
-		String keycloakUrl = System.getProperty("org.cerberus.keycloak.url");
+		String keycloakUrl = stripTrailingSlash(System.getProperty("org.cerberus.keycloak.url"));
 		String realm       = System.getProperty("org.cerberus.keycloak.realm");
 		// Optional : expected audience the token must be issued for (RFC 8707).
 		String audience    = System.getProperty("org.cerberus.keycloak.mcp.audience");

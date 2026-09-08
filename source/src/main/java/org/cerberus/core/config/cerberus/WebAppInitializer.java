@@ -95,6 +95,9 @@ public class WebAppInitializer implements WebApplicationInitializer {
                 servletContext.addServlet("oauthProtectedResourceMetadata", new OAuthProtectedResourceMetadataServlet());
         metadataServlet.setLoadOnStartup(3);
         metadataServlet.addMapping("/.well-known/oauth-protected-resource");
+        // RFC 9728 §3.1: clients also probe the path-appended form when the resource
+        // identifier has a non-root path (here, the /mcp endpoint).
+        metadataServlet.addMapping("/.well-known/oauth-protected-resource/mcp");
 
 
         // Session expires after 600 minutes of inactivity
