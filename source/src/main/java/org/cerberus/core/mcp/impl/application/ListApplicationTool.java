@@ -53,7 +53,7 @@ import java.util.Map;
 @Component
 public class ListApplicationTool implements MCPTool {
 
-    private static final String TOOL_NAME = "list_applications";
+    private static final String TOOL_NAME = "cerberus_application_list";
 
     /** Exhaustive set of DTO field names that can be returned to the caller. */
     private static final List<String> ALL_FIELDS = List.of("application", "description", "sort", "type", "system", "subsystem", "svnurl",
