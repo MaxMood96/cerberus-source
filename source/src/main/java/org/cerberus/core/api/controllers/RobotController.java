@@ -22,6 +22,7 @@ package org.cerberus.core.api.controllers;
 import com.fasterxml.jackson.annotation.JsonView;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -52,6 +53,8 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.security.Principal;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author bcivel
@@ -73,6 +76,33 @@ public class RobotController {
     private final PublicApiAuthenticationService apiAuthenticationService;
 
     private static final Logger LOG = LogManager.getLogger(RobotController.class);
+
+    //LIST ROBOTS
+    @GetMapping(headers = API_VERSION_1, produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+        summary = "List Robots",
+        description = "Get the list of all robots",
+        responses = {
+            @ApiResponse(responseCode = "200", description = "Found the robots", content = { @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = RobotDTOV001.class)))}),
+        }
+    )
+    @JsonView(View.Public.GET.class)
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseWrapper<List<RobotDTOV001>> findAllRobots(
+        @Parameter(description = "X-API-KEY for authentication") @RequestHeader(name = API_KEY, required = false) String apiKey,
+        @Parameter(hidden = true) HttpServletRequest request,
+        @Parameter(hidden = true) Principal principal) throws CerberusException {
+
+        String login = this.apiAuthenticationService.authenticateLogin(principal, apiKey);
+        logEventService.createForPublicCalls("/public/robots", "CALL-GET", LogEvent.STATUS_INFO, String.format("API /robots called with URL: %s", request.getRequestURL()), request, login);
+
+        return ResponseWrapper.wrap(
+                this.robotService.convert(this.robotService.readAll())
+                        .stream()
+                        .map(this.robotMapper::toDTO)
+                        .collect(Collectors.toList())
+        );
+    }
 
     //FIND ROBOT BY NAME
     @GetMapping(path = "/{robot}", headers = API_VERSION_1, produces = MediaType.APPLICATION_JSON_VALUE)
