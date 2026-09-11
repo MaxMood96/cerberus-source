@@ -376,6 +376,20 @@ public class RobotController {
         if (executor.getExecutorProxyType() == null) {
             executor.setExecutorProxyType(RobotExecutor.PROXY_TYPE_NONE);
         }
+        // deviceUdid, deviceName and description are NOT NULL columns with no DB default.
+        if (executor.getDeviceUdid() == null) {
+            executor.setDeviceUdid("");
+        }
+        if (executor.getDeviceName() == null) {
+            executor.setDeviceName("");
+        }
+        if (executor.getDescription() == null) {
+            executor.setDescription("");
+        }
+        // ExecutorExtensionPort is bound with setInt() (no null-check) in RobotExecutorDAO.create().
+        if (executor.getExecutorExtensionPort() == null) {
+            executor.setExecutorExtensionPort(0);
+        }
         executor.setUsrCreated(login);
         return executor;
     }
